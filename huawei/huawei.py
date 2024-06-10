@@ -7,6 +7,8 @@ from selenium.webdriver.common.keys import Keys
 from time import sleep
 from lxml import etree  # 导入lxml库中的etree模块
 from datetime import datetime
+import re
+import jieba
 
 # 设置ChromeDriver的路径
 chromedriver_path = r"D:\anaconda\chromedriver.exe"
@@ -76,11 +78,29 @@ score = score_element.text
 # 获取评分总人数
 # score_number_element = driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/div[3]/div[11]/div[3]/div[1]/div[2]')
 # score_number = score_number_element.text.replace("人评分", "").strip()
-
 # 获取各个评分人数
+
+
+# 读取停用词表
+def load_stopwords(filepath):
+    with open(filepath, 'r', encoding='utf-8') as file:
+        stopwords = set(line.strip() for line in file)
+    return stopwords
+
+
+# 去除停用词
+def remove_stopwords(words, stopwords):
+    return [word for word in words if word not in stopwords]
+
+
+# 加载停用词表
+stopwords = load_stopwords('../stop.txt')
+
 
 # 遍历评论列表,最多100次
 count = 0
+# 评论最大长度
+max_length=100
 for div in comment_list:
     if count >= 100:
         break
@@ -92,6 +112,21 @@ for div in comment_list:
     time = parsed_time.strftime("%Y/%m/%d")
     # 获取评论的内容
     comment = div.xpath('.//div[@class="part_middle"]/text()')[0]
+
+    # 去除符号
+    re_comment = re.sub(r'[^\w\s]', '', comment)
+    re_comment = re_comment.replace('\n', '')
+    # 截断评论内容
+    if len(comment) > max_length:
+        comment = comment[:max_length] + "..."
+    # 分词
+    text = jieba.lcut(re_comment)
+
+    # 去除停用词得到最终分词
+    filtered_text = remove_stopwords(text, stopwords)
+    # 重新连接为字符串
+    filtered_comment = ' '.join(filtered_text)
+
     # 获取单评论的评分
     star_elements = div.xpath('.//div[@class="newStarBox starBox"]/img')
     rating = 0
