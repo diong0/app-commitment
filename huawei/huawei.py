@@ -75,6 +75,7 @@ comment_data = []
 score_element = driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/div[3]/div[11]/div[3]/div[1]/div[1]')
 score = score_element.text
 
+
 # 获取评分总人数
 # score_number_element = driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/div[3]/div[11]/div[3]/div[1]/div[2]')
 # score_number = score_number_element.text.replace("人评分", "").strip()
@@ -96,11 +97,10 @@ def remove_stopwords(words, stopwords):
 # 加载停用词表
 stopwords = load_stopwords('../stop.txt')
 
-
 # 遍历评论列表,最多100次
 count = 0
 # 评论最大长度
-max_length=100
+max_length = 100
 for div in comment_list:
     if count >= 100:
         break
@@ -116,6 +116,7 @@ for div in comment_list:
     # 去除符号
     re_comment = re.sub(r'[^\w\s]', '', comment)
     re_comment = re_comment.replace('\n', '')
+    re_comment = re_comment.replace(' ', '')
     # 截断评论内容
     if len(comment) > max_length:
         comment = comment[:max_length] + "..."

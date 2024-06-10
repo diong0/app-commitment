@@ -9,8 +9,26 @@ from selenium.webdriver.common.keys import Keys
 from time import sleep
 from lxml import etree  # 导入lxml库中的etree模块
 from datetime import datetime
+import jieba
+import re
 
 appname = '抖音'
+
+
+# 读取停用词表
+def load_stopwords(filepath):
+    with open(filepath, 'r', encoding='utf-8') as file:
+        stopwords = set(line.strip() for line in file)
+    return stopwords
+
+
+# 去除停用词
+def remove_stopwords(words, stopwords):
+    return [word for word in words if word not in stopwords]
+
+
+# 加载停用词表
+stopwords = load_stopwords('../stop.txt')
 # 寻找包名
 # 设置ChromeDriver的路径
 chromedriver_path = r"D:\anaconda\chromedriver.exe"
@@ -34,8 +52,6 @@ driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
 })
 # 等待页面加载
 driver.implicitly_wait(10)  # 隐式等待，最多等10秒
-
-
 
 driver.find_element(By.XPATH, '//*[@id="kO001e"]/header/nav/div/div[1]/button').click()
 driver.find_element(By.XPATH, '//*[@id="kO001e"]/header/nav/c-wiz/div/div/label/input').send_keys(appname)
@@ -63,6 +79,7 @@ else:
 appid = package_name
 maxDataSize = 300
 
+
 def fetch_reviews(appid, maxDataSize):
     result = []
     continuation_token = None
@@ -81,9 +98,11 @@ def fetch_reviews(appid, maxDataSize):
             break  # 如果没有更多数据，退出循环
     return result
 
+
 result = fetch_reviews(appid, maxDataSize)
 
 data_list = []
+max_length = 100
 for data in result:
     name = data.get('userName')
     content = data.get('content')
@@ -94,6 +113,19 @@ for data in result:
     # 格式化日期
     if isinstance(at, datetime):
         at = at.strftime("%Y/%m/%d")
+
+    # 去除符号
+    re_content = re.sub(r'[^\w\s]', '', content)
+    re_content = re_content.replace('\n', '')
+    re_content = re_content.replace(' ', '')
+    # 截断评论内容
+    if len(content) > max_length:
+        content = content[:max_length] + "..."
+    # 分词
+    text = jieba.lcut(re_content)
+
+    # 去除停用词
+    filtered_text = remove_stopwords(text, stopwords)
 
     data_dict = {
         '评论ID': name,

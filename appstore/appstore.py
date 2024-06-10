@@ -74,6 +74,7 @@ def SaveContent(id, wb, ws):
                 # 去除符号
                 re_content = re.sub(r'[^\w\s]', '', content)
                 re_content = re_content.replace('\n', '')
+                re_content = re_content.replace(' ', '')
                 # 截断评论内容
                 if len(content) > max_length:
                     content = content[:max_length] + "..."
