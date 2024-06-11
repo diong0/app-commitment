@@ -198,9 +198,6 @@ class Controller:
     def s2(self, event):
         print("取消关注该app按钮被点击")
 
-    def 用户评论查询(self, event):
-        print("用户评论查询按钮被点击")
-
     def s3(self, event):
         print("查询该app近况按钮被点击")
 
@@ -211,11 +208,11 @@ class Controller:
     def 用户查询(self, event):
         print("设置该用户情况按钮被点击")
 
-    def 管理员评论查询(self, event):  # 进入评论查询
+    def 评论查询(self, event):  # 进入评论查询
         print("管理员评论查询按钮被点击")
         # if self.admin_win:
         #    self.admin_win.withdraw()  # 确保admin_win被正确初始化后再调用withdraw
-        admin_search = AdminSearch(self.admin_win, self)  # 传入管理员窗口引用
+        admin_search = Search(self.admin_win, self)  # 传入管理员窗口引用
         admin_search.mainloop()
 
     def logout(self, event=None):
@@ -370,7 +367,7 @@ class MainApp(Toplevel):
     def __event_bind(self):
         self.tk_button_关注该app.bind('<Button-1>', self.controller.s1)
         self.tk_button_取消关注该app.bind('<Button-1>', self.controller.s2)
-        self.tk_button_查询具体评论.bind('<Button-1>', self.controller.用户评论查询)
+        self.tk_button_查询具体评论.bind('<Button-1>', self.controller.评论查询)
         self.tk_button_查询该app近况.bind('<Button-1>', self.controller.s3)
         self.tk_button_退出登录.bind('<Button-1>', self.controller.logout)
 
@@ -480,11 +477,11 @@ class AdminApp(Toplevel):
     def __event_bind(self):
         self.tk_button_获取最新评论.bind('<Button-1>', self.controller.获取评论)
         self.tk_button_设置该用户情况.bind('<Button-1>', self.controller.用户查询)
-        self.tk_button_评论查询.bind('<Button-1>', self.controller.管理员评论查询)
+        self.tk_button_评论查询.bind('<Button-1>', self.controller.评论查询)
         self.tk_button_返回登录.bind('<Button-1>', self.controller.logout)
 
 
-class AdminSearch(Toplevel):
+class Search(Toplevel):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
@@ -517,7 +514,7 @@ class AdminSearch(Toplevel):
         self.__event_bind()
 
     def __win(self):
-        self.title("管理员查询评论")
+        self.title("评论查询")
         width = 600
         height = 400
         screenwidth = self.winfo_screenwidth()
