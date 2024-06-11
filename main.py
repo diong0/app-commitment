@@ -205,8 +205,10 @@ class Controller:
     def 获取评论(self, event):
         print("获取最新评论按钮被点击")
 
-    def 用户查询(self, event):
+    def 用户查询(self, event): # 进入用户情况界面
         print("设置该用户情况按钮被点击")
+        admin_search = UserChange(self.admin_win, self)  # 传入管理员窗口引用
+        admin_search.mainloop()
 
     def 评论查询(self, event):  # 进入评论查询
         print("管理员评论查询按钮被点击")
@@ -234,6 +236,19 @@ class Controller:
 
     def 退出查询(self, event):
         print("退出查询按钮被点击")
+        event.widget.master.destroy()  # 关闭查询窗口
+        if self.admin_win:
+            self.admin_win.deiconify()  # 重新显示管理员窗口
+
+    # 管理员修改用户界面
+    def 修改按钮(self, event):
+        print("修改按钮被点击")
+        event.widget.master.destroy()  # 关闭查询窗口
+        if self.admin_win:
+            self.admin_win.deiconify()  # 重新显示管理员窗口
+
+    def 不修改按钮(self, event):
+        print("不修改按钮被点击")
         event.widget.master.destroy()  # 关闭查询窗口
         if self.admin_win:
             self.admin_win.deiconify()  # 重新显示管理员窗口
@@ -696,6 +711,108 @@ class Search(Toplevel):
         self.tk_button_增加分词.bind('<Button-1>', self.controller.增加分词)
         self.tk_button_删除分词.bind('<Button-1>', self.controller.删除分词)
         self.tk_button_退出查询.bind('<Button-1>', self.controller.退出查询)
+
+class UserChange(Toplevel):
+    def __init__(self, parent, controller):
+        super().__init__()
+        self.__win()
+        self.controller = controller
+        self.admin_window = parent  # 保存管理员窗口引用
+        self.tk_label_修改前账号 = self.__tk_label_修改前账号(self)
+        self.tk_label_修改前密码 = self.__tk_label_修改前密码(self)
+        self.tk_label_修改前关注app = self.__tk_label_修改前关注app(self)
+        self.tk_label_修改为 = self.__tk_label_修改为(self)
+        self.tk_text_修改后账号 = self.__tk_text_修改后账号(self)
+        self.tk_text_修改后密码 = self.__tk_text_修改后密码(self)
+        self.tk_text_修改后关注app = self.__tk_text_修改后关注app(self)
+        self.tk_button_修改按钮 = self.__tk_button_修改按钮(self)
+        self.tk_button_不修改按钮 = self.__tk_button_不修改按钮(self)
+        self.__event_bind()
+    def __win(self):
+        self.title("用户情况")
+        # 设置窗口大小、居中
+        width = 600
+        height = 400
+        screenwidth = self.winfo_screenwidth()
+        screenheight = self.winfo_screenheight()
+        geometry = '%dx%d+%d+%d' % (width, height, (screenwidth - width) / 2, (screenheight - height) / 2)
+        self.geometry(geometry)
+
+        self.resizable(width=False, height=False)
+
+    def scrollbar_autohide(self,vbar, hbar, widget):
+        """自动隐藏滚动条"""
+        def show():
+            if vbar: vbar.lift(widget)
+            if hbar: hbar.lift(widget)
+        def hide():
+            if vbar: vbar.lower(widget)
+            if hbar: hbar.lower(widget)
+        hide()
+        widget.bind("<Enter>", lambda e: show())
+        if vbar: vbar.bind("<Enter>", lambda e: show())
+        if vbar: vbar.bind("<Leave>", lambda e: hide())
+        if hbar: hbar.bind("<Enter>", lambda e: show())
+        if hbar: hbar.bind("<Leave>", lambda e: hide())
+        widget.bind("<Leave>", lambda e: hide())
+
+    def v_scrollbar(self,vbar, widget, x, y, w, h, pw, ph):
+        widget.configure(yscrollcommand=vbar.set)
+        vbar.config(command=widget.yview)
+        vbar.place(relx=(w + x) / pw, rely=y / ph, relheight=h / ph, anchor='ne')
+    def h_scrollbar(self,hbar, widget, x, y, w, h, pw, ph):
+        widget.configure(xscrollcommand=hbar.set)
+        hbar.config(command=widget.xview)
+        hbar.place(relx=x / pw, rely=(y + h) / ph, relwidth=w / pw, anchor='sw')
+    def create_bar(self,master, widget,is_vbar,is_hbar, x, y, w, h, pw, ph):
+        vbar, hbar = None, None
+        if is_vbar:
+            vbar = Scrollbar(master)
+            self.v_scrollbar(vbar, widget, x, y, w, h, pw, ph)
+        if is_hbar:
+            hbar = Scrollbar(master, orient="horizontal")
+            self.h_scrollbar(hbar, widget, x, y, w, h, pw, ph)
+        self.scrollbar_autohide(vbar, hbar, widget)
+    def __tk_label_修改前账号(self,parent):
+        label = Label(parent,text="账号:",anchor="center", )
+        label.place(x=70, y=100, width=50, height=30)
+        return label
+    def __tk_label_修改前密码(self,parent):
+        label = Label(parent,text="密码:",anchor="center", )
+        label.place(x=220, y=100, width=50, height=30)
+        return label
+    def __tk_label_修改前关注app(self,parent):
+        label = Label(parent,text="关注的app:",anchor="center", )
+        label.place(x=375, y=100, width=70, height=30)
+        return label
+    def __tk_label_修改为(self,parent):
+        label = Label(parent,text="修改为",anchor="center", )
+        label.place(x=70, y=152, width=50, height=30)
+        return label
+    def __tk_text_修改后账号(self,parent):
+        text = Text(parent)
+        text.place(x=80, y=200, width=100, height=30)
+        return text
+    def __tk_text_修改后密码(self,parent):
+        text = Text(parent)
+        text.place(x=230, y=200, width=100, height=30)
+        return text
+    def __tk_text_修改后关注app(self,parent):
+        text = Text(parent)
+        text.place(x=380, y=200, width=100, height=30)
+        return text
+    def __tk_button_修改按钮(self,parent):
+        btn = Button(parent, text="修改", takefocus=False,)
+        btn.place(x=200, y=320, width=50, height=30)
+        return btn
+    def __tk_button_不修改按钮(self,parent):
+        btn = Button(parent, text="不修改", takefocus=False,)
+        btn.place(x=349, y=320, width=50, height=30)
+        return btn
+
+    def __event_bind(self):
+        self.tk_button_修改按钮.bind('<Button-1>', self.controller.修改按钮)
+        self.tk_button_不修改按钮.bind('<Button-1>', self.controller.不修改按钮)
 
 
 if __name__ == "__main__":
