@@ -69,7 +69,7 @@ def save_content(id, wb, ws, stopwords, comment_data, appname):
                 ws.cell(row=row, column=4, value=formatted_date)
                 ws.cell(row=row, column=5, value=version)
                 row += 1
-                comment_data.append([str(name), appname, formatted_date, '华为', version, content, rate, [filtered_text]])
+                comment_data.append([str(name), appname, formatted_date, '苹果', version, content, rate, [filtered_text]])
         else:
             return
         time.sleep(2)
@@ -83,7 +83,7 @@ def fetch_comments(appname, stopwords_filepath='stop.txt'):
     if app_id is None:
         print("Exiting due to no results found.")
         return comment_data
-
+    '''
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.cell(row=1, column=1, value="评论ID")
@@ -91,9 +91,11 @@ def fetch_comments(appname, stopwords_filepath='stop.txt'):
     ws.cell(row=1, column=3, value="评论评分")
     ws.cell(row=1, column=4, value="评论时间")
     ws.cell(row=1, column=5, value="评论版本")
-
+    
     save_content(app_id, wb, ws, stopwords, comment_data, appname)
 
     wb.save(appname + ".xlsx")
+    '''
     print("Done!")
+
     return comment_data

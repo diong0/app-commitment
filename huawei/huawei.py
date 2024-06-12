@@ -139,6 +139,7 @@ def scrape_app_comments(appname):
         comment_data.append([str(name), appname, time, '华为', user_version, comment, rating, [filtered_comment]])
         count += 1
     # 循环写入评论数据到Excel
+    """
     for i, comment in enumerate(comment_data):
         # 计算行号
         row = i + 2
@@ -150,7 +151,8 @@ def scrape_app_comments(appname):
         sheet.cell(row=row, column=5, value=comment[4])
         sheet.cell(row=row, column=6, value=comment[5])
         # 保存工作簿
-        workbook.save("Huawei.xlsx")
+        workbook.save("华为_"+appname+".xlsx")
+    """
     # 关闭浏览器
     driver.quit()
 

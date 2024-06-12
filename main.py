@@ -2,7 +2,12 @@ import random
 from tkinter import *
 from tkinter.ttk import *
 from tkinter import messagebox
+import threading
 
+
+from appstore.苹果 import fetch_comments
+from huawei.huawei import scrape_app_comments
+from googleplay.googleplay import scrape_google_play_reviews
 
 class WinGUI(Tk):
     def __init__(self):
@@ -204,6 +209,22 @@ class Controller:
     # 管理员界面
     def 获取评论(self, event):
         print("获取最新评论按钮被点击")
+        # 创建并启动线程
+        threading.Thread(target=self.fetch_comments).start()
+
+    def fetch_comments(self):
+        comment = []
+        comment.append(scrape_app_comments(appname="抖音"))
+        comment.append(scrape_google_play_reviews(appname="抖音"))
+        comment.append(fetch_comments(appname="抖音"))
+        print(comment)
+        # 更新UI时需要使用 `after` 方法确保线程安全
+        self.win.after(0, self.update_ui_with_comments, comment)
+
+    def update_ui_with_comments(self, comment):
+        # 在这里更新UI，确保在主线程中执行
+        print(comment)
+        messagebox.showinfo('提示', message="最新评论获取成功")
 
     def 用户查询(self, event): # 进入用户情况界面
         print("设置该用户情况按钮被点击")

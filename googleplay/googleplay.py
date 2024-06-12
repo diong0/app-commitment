@@ -104,8 +104,9 @@ def scrape_google_play_reviews(appname):
             '评论版本': appversion
         }
         data_list.append(data_dict)
-        comment_data.append([str(name), appname, at, '华为', appversion, content, score, [filtered_text]])
+        comment_data.append([str(name), appname, at, '谷歌', appversion, content, score, [filtered_text]])
 
+    '''
     if data_list:
         with open(f'{appname}.csv', 'w', encoding='utf-8-sig', newline='') as f:
             title = data_list[0].keys()
@@ -115,6 +116,7 @@ def scrape_google_play_reviews(appname):
         print('csv文件写入完成')
     else:
         print('没有获取到数据')
+    '''
 
     return comment_data
 
