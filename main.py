@@ -4,10 +4,10 @@ from tkinter.ttk import *
 from tkinter import messagebox
 import threading
 
-
 from appstore.苹果 import fetch_comments
 from huawei.huawei import scrape_app_comments
 from googleplay.googleplay import scrape_google_play_reviews
+
 
 class WinGUI(Tk):
     def __init__(self):
@@ -152,9 +152,13 @@ class Win(WinGUI):
 
 
 class Controller:
+    def __init__(self):
+        self.win = None
+        self.main_app_win = None
+        self.admin_win = None
+
     def init(self, win):
         self.win = win
-        self.admin_win = None  # 添加对管理员窗口的引用
 
     # 主界面
     def login(self, event):
@@ -188,20 +192,24 @@ class Controller:
 
     def show_main_app(self):  # 主界面到用户界面
         self.win.withdraw()  # 隐藏当前窗口
-        main_app = MainApp(self.win)
-        main_app.mainloop()
+        self.main_app_win = MainApp(self.win, self)
+        self.main_app_win.mainloop()
 
     def show_admin_app(self):  # 主界面到管理员界面
         self.win.withdraw()  # 隐藏当前窗口
-        admin_app = AdminApp(self.win, self)
-        admin_app.mainloop()
+        self.admin_win = AdminApp(self.win, self)
+        self.admin_win.mainloop()
 
     # 用户界面
     def s1(self, event):
-        print("关注该app按钮被点击")
+        if self.main_app_win:
+            app_name = self.main_app_win.get_app_input()
+            print(f"关注该app按钮被点击, 输入的app名: {app_name}")
 
     def s2(self, event):
-        print("取消关注该app按钮被点击")
+        if self.main_app_win:
+            app_name = self.main_app_win.get_app_input()
+            print(f"取消关注该app按钮被点击, 输入的app名: {app_name}")
 
     def s3(self, event):
         print("查询该app近况按钮被点击")
@@ -214,9 +222,9 @@ class Controller:
 
     def fetch_comments(self):
         comment = []
-        comment.append(scrape_app_comments(appname="抖音"))
-        comment.append(scrape_google_play_reviews(appname="抖音"))
-        comment.append(fetch_comments(appname="抖音"))
+        comment.append(fetch_comments(appname="qq"))
+        comment.append(scrape_app_comments(appname="qq"))
+        comment.append(scrape_google_play_reviews(appname="qq"))
         print(comment)
         # 更新UI时需要使用 `after` 方法确保线程安全
         self.win.after(0, self.update_ui_with_comments, comment)
@@ -226,7 +234,7 @@ class Controller:
         print(comment)
         messagebox.showinfo('提示', message="最新评论获取成功")
 
-    def 用户查询(self, event): # 进入用户情况界面
+    def 用户查询(self, event):  # 进入用户情况界面
         print("设置该用户情况按钮被点击")
         admin_search = UserChange(self.admin_win, self)  # 传入管理员窗口引用
         admin_search.mainloop()
@@ -276,7 +284,7 @@ class Controller:
 
 
 class MainApp(Toplevel):
-    def __init__(self, parent):
+    def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         self.__win()
@@ -344,6 +352,9 @@ class MainApp(Toplevel):
             hbar = Scrollbar(master, orient="horizontal")
             self.h_scrollbar(hbar, widget, x, y, w, h, pw, ph)
         self.scrollbar_autohide(vbar, hbar, widget)
+
+    def get_app_input(self):
+        return self.tk_text_输入app.get("1.0", END).strip()
 
     def __tk_label_已关注的app(self, parent):
         label = Label(parent, text="已关注的app:", anchor="center", )
@@ -626,7 +637,8 @@ class Search(Toplevel):
     def __tk_select_box_选择日(self, parent):
         cb = Combobox(parent, state="readonly")
         cb['values'] = (
-            "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
+            "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
+            "20",
             "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31")
         cb.place(x=158, y=80, width=40, height=30)
         return cb
@@ -733,6 +745,7 @@ class Search(Toplevel):
         self.tk_button_删除分词.bind('<Button-1>', self.controller.删除分词)
         self.tk_button_退出查询.bind('<Button-1>', self.controller.退出查询)
 
+
 class UserChange(Toplevel):
     def __init__(self, parent, controller):
         super().__init__()
@@ -749,6 +762,7 @@ class UserChange(Toplevel):
         self.tk_button_修改按钮 = self.__tk_button_修改按钮(self)
         self.tk_button_不修改按钮 = self.__tk_button_不修改按钮(self)
         self.__event_bind()
+
     def __win(self):
         self.title("用户情况")
         # 设置窗口大小、居中
@@ -761,14 +775,17 @@ class UserChange(Toplevel):
 
         self.resizable(width=False, height=False)
 
-    def scrollbar_autohide(self,vbar, hbar, widget):
+    def scrollbar_autohide(self, vbar, hbar, widget):
         """自动隐藏滚动条"""
+
         def show():
             if vbar: vbar.lift(widget)
             if hbar: hbar.lift(widget)
+
         def hide():
             if vbar: vbar.lower(widget)
             if hbar: hbar.lower(widget)
+
         hide()
         widget.bind("<Enter>", lambda e: show())
         if vbar: vbar.bind("<Enter>", lambda e: show())
@@ -777,15 +794,17 @@ class UserChange(Toplevel):
         if hbar: hbar.bind("<Leave>", lambda e: hide())
         widget.bind("<Leave>", lambda e: hide())
 
-    def v_scrollbar(self,vbar, widget, x, y, w, h, pw, ph):
+    def v_scrollbar(self, vbar, widget, x, y, w, h, pw, ph):
         widget.configure(yscrollcommand=vbar.set)
         vbar.config(command=widget.yview)
         vbar.place(relx=(w + x) / pw, rely=y / ph, relheight=h / ph, anchor='ne')
-    def h_scrollbar(self,hbar, widget, x, y, w, h, pw, ph):
+
+    def h_scrollbar(self, hbar, widget, x, y, w, h, pw, ph):
         widget.configure(xscrollcommand=hbar.set)
         hbar.config(command=widget.xview)
         hbar.place(relx=x / pw, rely=(y + h) / ph, relwidth=w / pw, anchor='sw')
-    def create_bar(self,master, widget,is_vbar,is_hbar, x, y, w, h, pw, ph):
+
+    def create_bar(self, master, widget, is_vbar, is_hbar, x, y, w, h, pw, ph):
         vbar, hbar = None, None
         if is_vbar:
             vbar = Scrollbar(master)
@@ -794,40 +813,49 @@ class UserChange(Toplevel):
             hbar = Scrollbar(master, orient="horizontal")
             self.h_scrollbar(hbar, widget, x, y, w, h, pw, ph)
         self.scrollbar_autohide(vbar, hbar, widget)
-    def __tk_label_修改前账号(self,parent):
-        label = Label(parent,text="账号:",anchor="center", )
+
+    def __tk_label_修改前账号(self, parent):
+        label = Label(parent, text="账号:", anchor="center", )
         label.place(x=70, y=100, width=50, height=30)
         return label
-    def __tk_label_修改前密码(self,parent):
-        label = Label(parent,text="密码:",anchor="center", )
+
+    def __tk_label_修改前密码(self, parent):
+        label = Label(parent, text="密码:", anchor="center", )
         label.place(x=220, y=100, width=50, height=30)
         return label
-    def __tk_label_修改前关注app(self,parent):
-        label = Label(parent,text="关注的app:",anchor="center", )
+
+    def __tk_label_修改前关注app(self, parent):
+        label = Label(parent, text="关注的app:", anchor="center", )
         label.place(x=375, y=100, width=70, height=30)
         return label
-    def __tk_label_修改为(self,parent):
-        label = Label(parent,text="修改为",anchor="center", )
+
+    def __tk_label_修改为(self, parent):
+        label = Label(parent, text="修改为", anchor="center", )
         label.place(x=70, y=152, width=50, height=30)
         return label
-    def __tk_text_修改后账号(self,parent):
+
+    def __tk_text_修改后账号(self, parent):
         text = Text(parent)
         text.place(x=80, y=200, width=100, height=30)
         return text
-    def __tk_text_修改后密码(self,parent):
+
+    def __tk_text_修改后密码(self, parent):
         text = Text(parent)
         text.place(x=230, y=200, width=100, height=30)
         return text
-    def __tk_text_修改后关注app(self,parent):
+
+    def __tk_text_修改后关注app(self, parent):
         text = Text(parent)
         text.place(x=380, y=200, width=100, height=30)
         return text
-    def __tk_button_修改按钮(self,parent):
-        btn = Button(parent, text="修改", takefocus=False,)
+
+    def __tk_button_修改按钮(self, parent):
+        btn = Button(parent, text="修改", takefocus=False, )
         btn.place(x=200, y=320, width=50, height=30)
         return btn
-    def __tk_button_不修改按钮(self,parent):
-        btn = Button(parent, text="不修改", takefocus=False,)
+
+    def __tk_button_不修改按钮(self, parent):
+        btn = Button(parent, text="不修改", takefocus=False, )
         btn.place(x=349, y=320, width=50, height=30)
         return btn
 
