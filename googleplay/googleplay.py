@@ -1,84 +1,23 @@
 from google_play_scraper import Sort, reviews
 import csv
 import openpyxl
-from openpyxl.utils import get_column_letter
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from time import sleep
-from lxml import etree  # 导入lxml库中的etree模块
+from lxml import etree
 from datetime import datetime
 import jieba
 import re
 
-appname = '抖音'
-
-
-# 读取停用词表
 def load_stopwords(filepath):
     with open(filepath, 'r', encoding='utf-8') as file:
         stopwords = set(line.strip() for line in file)
     return stopwords
 
-
-# 去除停用词
 def remove_stopwords(words, stopwords):
     return [word for word in words if word not in stopwords]
-
-
-# 加载停用词表
-stopwords = load_stopwords('../stop.txt')
-# 寻找包名
-# 设置ChromeDriver的路径
-chromedriver_path = r"D:\anaconda\chromedriver.exe"
-
-# 创建ChromeDriver服务对象
-service = Service(chromedriver_path)
-
-# 创建Chrome浏览器实例
-driver = webdriver.Chrome(service=service)
-
-# 打开一个网页
-driver.get("https://play.google.com/store/apps")
-
-# 在浏览器执行JavaScript代码，用于欺骗检测机制，隐藏webdriver属性
-driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-    "source": """
-            Object.defineProperty(navigator, 'webdriver', {
-              get: () => undefined
-            })
-          """
-})
-# 等待页面加载
-driver.implicitly_wait(10)  # 隐式等待，最多等10秒
-
-driver.find_element(By.XPATH, '//*[@id="kO001e"]/header/nav/div/div[1]/button').click()
-driver.find_element(By.XPATH, '//*[@id="kO001e"]/header/nav/c-wiz/div/div/label/input').send_keys(appname)
-driver.find_element(By.XPATH, '//*[@id="kO001e"]/header/nav/c-wiz/div/div/label/input').send_keys(Keys.ENTER)
-sleep(2)
-# 提取搜索结果的包名
-page_source = driver.page_source
-html = etree.HTML(page_source)
-
-app_link_xpath = '//a[@class="Qfxief"]'
-app_elements = html.xpath(app_link_xpath)
-package_name = None
-
-if app_elements:
-    app_href = app_elements[0].get('href')
-    print(f"找到的链接: {app_href}")  # 调试信息
-    if app_href and 'id=' in app_href:
-        package_name = app_href.split('id=')[-1]
-
-if package_name:
-    print(f"应用包名: {package_name}")
-else:
-    print("未找到应用包名")
-
-appid = package_name
-maxDataSize = 300
-
 
 def fetch_reviews(appid, maxDataSize):
     result = []
@@ -98,50 +37,86 @@ def fetch_reviews(appid, maxDataSize):
             break  # 如果没有更多数据，退出循环
     return result
 
+def scrape_google_play_reviews(appname):
+    stopwords = load_stopwords('stop.txt')
+    chromedriver_path = r"D:\anaconda\chromedriver.exe"
+    service = Service(chromedriver_path)
+    driver = webdriver.Chrome(service=service)
+    driver.get("https://play.google.com/store/apps")
+    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+        "source": """
+            Object.defineProperty(navigator, 'webdriver', {
+              get: () => undefined
+            })
+          """
+    })
+    driver.implicitly_wait(10)
+    driver.find_element(By.XPATH, '//*[@id="kO001e"]/header/nav/div/div[1]/button').click()
+    driver.find_element(By.XPATH, '//*[@id="kO001e"]/header/nav/c-wiz/div/div/label/input').send_keys(appname)
+    driver.find_element(By.XPATH, '//*[@id="kO001e"]/header/nav/c-wiz/div/div/label/input').send_keys(Keys.ENTER)
+    sleep(2)
+    page_source = driver.page_source
+    html = etree.HTML(page_source)
+    app_link_xpath = '//a[@class="Qfxief"]'
+    app_elements = html.xpath(app_link_xpath)
+    package_name = None
 
-result = fetch_reviews(appid, maxDataSize)
+    if app_elements:
+        app_href = app_elements[0].get('href')
+        if app_href and 'id=' in app_href:
+            package_name = app_href.split('id=')[-1]
 
-data_list = []
-max_length = 100
-for data in result:
-    name = data.get('userName')
-    content = data.get('content')
-    score = data.get('score')
-    at = data.get('at')
-    appversion = data.get('appVersion')
+    driver.quit()
 
-    # 格式化日期
-    if isinstance(at, datetime):
-        at = at.strftime("%Y/%m/%d")
+    if not package_name:
+        return []
 
-    # 去除符号
-    re_content = re.sub(r'[^\w\s]', '', content)
-    re_content = re_content.replace('\n', '')
-    re_content = re_content.replace(' ', '')
-    # 截断评论内容
-    if len(content) > max_length:
-        content = content[:max_length] + "..."
-    # 分词
-    text = jieba.lcut(re_content)
+    appid = package_name
+    maxDataSize = 300
+    result = fetch_reviews(appid, maxDataSize)
 
-    # 去除停用词
-    filtered_text = remove_stopwords(text, stopwords)
+    data_list = []
+    comment_data = []
+    max_length = 100
+    for data in result:
+        name = data.get('userName')
+        content = data.get('content')
+        score = data.get('score')
+        at = data.get('at')
+        appversion = data.get('appVersion')
 
-    data_dict = {
-        '评论ID': name,
-        '评论内容': content,
-        '评论评分': score,
-        '评论时间': at,
-        '评论版本': appversion
-    }
-    data_list.append(data_dict)
+        if isinstance(at, datetime):
+            at = at.strftime("%Y/%m/%d")
 
-if data_list:
-    with open(f'{appname}.csv', 'w', encoding='utf-8-sig', newline='') as f:
-        title = data_list[0].keys()
-        writer = csv.DictWriter(f, title)
-        writer.writeheader()
-        writer.writerows(data_list)
-    print('csv文件写入完成')
-else:
-    print('没有获取到数据')
+        re_content = re.sub(r'[^\w\s]', '', content)
+        re_content = re_content.replace('\n', '')
+        re_content = re_content.replace(' ', '')
+        if len(content) > max_length:
+            content = content[:max_length] + "..."
+        text = jieba.lcut(re_content)
+        filtered_text = remove_stopwords(text, stopwords)
+
+        data_dict = {
+            '评论ID': name,
+            '评论内容': content,
+            '评论评分': score,
+            '评论时间': at,
+            '评论版本': appversion
+        }
+        data_list.append(data_dict)
+        comment_data.append([str(name), appname, at, '华为', appversion, content, score, [filtered_text]])
+
+    if data_list:
+        with open(f'{appname}.csv', 'w', encoding='utf-8-sig', newline='') as f:
+            title = data_list[0].keys()
+            writer = csv.DictWriter(f, title)
+            writer.writeheader()
+            writer.writerows(data_list)
+        print('csv文件写入完成')
+    else:
+        print('没有获取到数据')
+
+    return comment_data
+
+# 调用示例
+# comment_data = scrape_google_play_reviews('YourAppName')

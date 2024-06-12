@@ -3,7 +3,7 @@ import imageio.v2 as imageio
 import pymssql
 
 # 连接到数据库
-conn = pymssql.connect('DIONG', 'cqycqy', '123456', 'appmanager')
+conn = pymssql.connect('DIONG', 'cqycqy', '123456', 'appmanager1')
 
 print('连接成功！')
 
@@ -17,7 +17,7 @@ data = [
     # 添加更多的数据
 ]
 # 插入数据的SQL语句
-insert_sql = "INSERT INTO pin_c_d (评论内容, 分词情况) VALUES (%s, %s)"
+insert_sql = "INSERT INTO 分词 (评论内容, 分词情况) VALUES (%s, %s)"
 
 # 执行插入操作
 for row in data:
