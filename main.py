@@ -7,6 +7,7 @@ import threading
 from appstore.苹果 import fetch_comments
 from huawei.huawei import scrape_app_comments
 from googleplay.googleplay import scrape_google_play_reviews
+import sql
 
 
 class WinGUI(Tk):
@@ -156,6 +157,8 @@ class Controller:
         self.win = None
         self.main_app_win = None
         self.admin_win = None
+        self.user = [['1', '1', '1'], ['2', '2', '2']]  # 用于存储用户已关注的 app 列表
+        # self.user = sql.get_yh()
 
     def init(self, win):
         self.win = win
@@ -164,19 +167,24 @@ class Controller:
     def login(self, event):
         username = self.win.get_username()
         password = self.win.get_password()
-        identity = self.win.get_identity()
+        identity = str(self.win.get_identity())
         # 假设验证成功
         if username and password:
-            if identity == 1:
+            if identity == '1':
                 messagebox.showinfo('提示', message="用户登录成功")
                 print(f"登录信息: 账号={username}, 密码={password}, 身份=用户")
+                self.user_followed_apps = ["App1", "App2", "App3"]  # 从数据库获取到的已关注 app 列表
                 self.show_main_app()
-            elif identity == 2:
+            elif identity == '2':
                 messagebox.showinfo('提示', message="管理员登录成功")
                 print(f"登录信息: 账号={username}, 密码={password}, 身份=管理员")
                 self.show_admin_app()
+            else:
+                messagebox.showerror('错误', message="身份错误")
+                return
         else:
-            messagebox.showerror('错误', message="登录失败")
+            messagebox.showerror('错误', message="账号或密码错误")
+            return
 
     def register(self, event):
         username = self.win.get_username()
@@ -193,6 +201,7 @@ class Controller:
     def show_main_app(self):  # 主界面到用户界面
         self.win.withdraw()  # 隐藏当前窗口
         self.main_app_win = MainApp(self.win, self)
+        self.main_app_win.update_followed_apps(self.user_followed_apps)  # 更新用户已关注的 app
         self.main_app_win.mainloop()
 
     def show_admin_app(self):  # 主界面到管理员界面
@@ -211,21 +220,27 @@ class Controller:
             app_name = self.main_app_win.get_app_input()
             print(f"取消关注该app按钮被点击, 输入的app名: {app_name}")
 
-    def s3(self, event):
-        print("查询该app近况按钮被点击")
+    def s3(self, event):  # 生成图
+        if self.main_app_win:
+            particle_size = self.main_app_win.get_particle_size
+            app_name = self.main_app_win.get_app_input()
+            print(f"查询该app近况按钮被点击, 输入的app名: {app_name}")
 
     # 管理员界面
     def 获取评论(self, event):
-        print("获取最新评论按钮被点击")
-        # 创建并启动线程
-        threading.Thread(target=self.fetch_comments).start()
+        if self.admin_win:
+            app_name = self.admin_win.get_app_name_input()
+            print(f"获取最新评论按钮被点击, 输入的app名: {app_name}")
+            # 创建并启动线程
+            threading.Thread(target=self.fetch_comments, args=(app_name,)).start()
 
-    def fetch_comments(self):
+    def fetch_comments(self, app_name):
         comment = []
-        comment.append(fetch_comments(appname="qq"))
-        comment.append(scrape_app_comments(appname="qq"))
-        comment.append(scrape_google_play_reviews(appname="qq"))
+        comment.extend(fetch_comments(app_name))
+        #comment.extend(scrape_app_comments(app_name))
+        #comment.extend(scrape_google_play_reviews(app_name))
         print(comment)
+        sql.getin(comment)
         # 更新UI时需要使用 `after` 方法确保线程安全
         self.win.after(0, self.update_ui_with_comments, comment)
 
@@ -353,13 +368,20 @@ class MainApp(Toplevel):
             self.h_scrollbar(hbar, widget, x, y, w, h, pw, ph)
         self.scrollbar_autohide(vbar, hbar, widget)
 
+    def get_particle_size(self):  # 返回颗粒度
+        return self.particle_size.get()
+
     def get_app_input(self):
         return self.tk_text_输入app.get("1.0", END).strip()
 
     def __tk_label_已关注的app(self, parent):
-        label = Label(parent, text="已关注的app:", anchor="center", )
-        label.place(x=100, y=60, width=90, height=30)
-        return label
+        self.label_已关注的app = Label(parent, text="已关注的app:", anchor="center")
+        self.label_已关注的app.place(x=80, y=60, width=200, height=50)
+        return self.label_已关注的app
+
+    def update_followed_apps(self, apps):
+        followed_apps_text = "已关注的app:" + ",".join(apps)
+        self.label_已关注的app.config(text=followed_apps_text)
 
     def __tk_text_输入app(self, parent):
         text = Text(parent)
@@ -483,6 +505,9 @@ class AdminApp(Toplevel):
             hbar = Scrollbar(master, orient="horizontal")
             self.h_scrollbar(hbar, widget, x, y, w, h, pw, ph)
         self.scrollbar_autohide(vbar, hbar, widget)
+
+    def get_app_name_input(self):
+        return self.tk_input_app名.get().strip()
 
     def __tk_button_获取最新评论(self, parent):
         btn = Button(parent, text="获取最新评论", takefocus=False, )
@@ -868,14 +893,3 @@ if __name__ == "__main__":
     controller = Controller()
     win = Win(controller)
     win.mainloop()
-
-"""
-分词,分词解析,,
-用户界面
-查询关注的app最近100条评论
-近况:分词图,评论数趋势图,评论评分饼图
-管理员界面
-获取(爬虫)最新评论
-查询用户情况,设置用户密码、关注的APP
-按时间、内容、地区、分数等搜索条件，查询相应的评论详情
-"""

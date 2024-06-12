@@ -69,7 +69,7 @@ def save_content(id, wb, ws, stopwords, comment_data, appname):
                 ws.cell(row=row, column=4, value=formatted_date)
                 ws.cell(row=row, column=5, value=version)
                 row += 1
-                comment_data.append([str(name), appname, formatted_date, '苹果', version, content, rate, filtered_text])
+                comment_data.append([name, appname, updated_date, '苹果', version, content, rate, filtered_text])
         else:
             return
         time.sleep(2)

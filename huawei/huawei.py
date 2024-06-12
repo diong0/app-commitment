@@ -136,7 +136,7 @@ def scrape_app_comments(appname):
         raw_user_version = div.xpath('.//div[@class ="version"]/text()')[0]
         user_version = raw_user_version.strip("()")
         # 将评论数据添加到列表中
-        comment_data.append([str(name), appname, time, '华为', user_version, comment, rating, [filtered_comment]])
+        comment_data.append([str(name), appname, parsed_time, '华为', user_version, comment, rating, [filtered_comment]])
         count += 1
     # 循环写入评论数据到Excel
     """
