@@ -7,7 +7,7 @@ import threading
 from appstore.苹果 import fetch_comments
 from huawei.huawei import scrape_app_comments
 from googleplay.googleplay import scrape_google_play_reviews
-import sql
+import pin
 
 
 class WinGUI(Tk):
@@ -157,8 +157,10 @@ class Controller:
         self.win = None
         self.main_app_win = None
         self.admin_win = None
-        self.user = [['1', '1', '1'], ['2', '2', '2']]  # 用于存储用户已关注的 app 列表
-        # self.user = sql.get_yh()
+        self.search_win = None  # 添加引用
+        self.username = None  # 添加一个变量来保存用户名
+        self.password = None  # 添加一个变量来保存密码
+
 
     def init(self, win):
         self.win = win
@@ -169,16 +171,19 @@ class Controller:
         password = self.win.get_password()
         identity = str(self.win.get_identity())
         # 假设验证成功
-        if username and password:
+        if pin.log_in(username, password):
+            self.username = username  # 登录成功后保存用户名
+            self.password = password  # 登录成功后保存密码
             if identity == '1':
                 messagebox.showinfo('提示', message="用户登录成功")
                 print(f"登录信息: 账号={username}, 密码={password}, 身份=用户")
-                self.user_followed_apps = ["App1", "App2", "App3"]  # 从数据库获取到的已关注 app 列表
+                self.user_followed_apps = pin.view_users(username, password)  # 从数据库获取到的已关注 app 列表
                 self.show_main_app()
             elif identity == '2':
                 messagebox.showinfo('提示', message="管理员登录成功")
                 print(f"登录信息: 账号={username}, 密码={password}, 身份=管理员")
                 self.show_admin_app()
+
             else:
                 messagebox.showerror('错误', message="身份错误")
                 return
@@ -191,10 +196,10 @@ class Controller:
         password = self.win.get_password()
         identity = self.win.get_identity()
         # 假设注册成功
-        if username and password:
+        if not pin.log_in(username, password):
+            pin.sign_in(username, password, identity)
             messagebox.showinfo('提示', message="注册成功")
             print(f"注册信息: 账号={username}, 密码={password}, 身份={'用户' if identity == 1 else '管理员'}")
-            self.show_main_app()
         else:
             messagebox.showerror('错误', message="注册失败")
 
@@ -207,18 +212,22 @@ class Controller:
     def show_admin_app(self):  # 主界面到管理员界面
         self.win.withdraw()  # 隐藏当前窗口
         self.admin_win = AdminApp(self.win, self)
+        self.update_user_list()  # 更新用户列表框
         self.admin_win.mainloop()
 
     # 用户界面
-    def s1(self, event):
+    def s1(self, event):  # 关注某app
         if self.main_app_win:
             app_name = self.main_app_win.get_app_input()
             print(f"关注该app按钮被点击, 输入的app名: {app_name}")
+            print(f"登录用户账号: {self.username}, 密码: {self.password}")  # 打印登录用户的账号和密码
+            pin.at_app(self.username, self.password, app_name)
 
-    def s2(self, event):
+    def s2(self, event):  # 取关某app
         if self.main_app_win:
             app_name = self.main_app_win.get_app_input()
             print(f"取消关注该app按钮被点击, 输入的app名: {app_name}")
+            pin.des_app(self.username, self.password, app_name)
 
     def s3(self, event):  # 生成图
         if self.main_app_win:
@@ -227,6 +236,13 @@ class Controller:
             print(f"查询该app近况按钮被点击, 输入的app名: {app_name}")
 
     # 管理员界面
+
+    def update_user_list(self):
+        users = pin.get_yh()
+        if self.admin_win:
+            self.admin_win.update_user_listbox(users)
+        self.admin_win.update_user_listbox(users)
+
     def 获取评论(self, event):
         if self.admin_win:
             app_name = self.admin_win.get_app_name_input()
@@ -236,11 +252,12 @@ class Controller:
 
     def fetch_comments(self, app_name):
         comment = []
-        comment.extend(fetch_comments(app_name))
+
         #comment.extend(scrape_app_comments(app_name))
+        comment.extend(fetch_comments(app_name))
         #comment.extend(scrape_google_play_reviews(app_name))
         print(comment)
-        sql.getin(comment)
+        pin.getin(comment)
         # 更新UI时需要使用 `after` 方法确保线程安全
         self.win.after(0, self.update_ui_with_comments, comment)
 
@@ -251,6 +268,11 @@ class Controller:
 
     def 用户查询(self, event):  # 进入用户情况界面
         print("设置该用户情况按钮被点击")
+        selected_user = self.admin_win.tk_list_box_用户账户.get(self.admin_win.tk_list_box_用户账户.curselection())
+        print(selected_user)
+        # user_info = pin.get_yh(selected_user)
+        # username, password, followed_apps = user_info['username'], user_info['password'], user_info['followed_apps']
+        username, password, followed_apps = '1','1','微信'
         admin_search = UserChange(self.admin_win, self)  # 传入管理员窗口引用
         admin_search.mainloop()
 
@@ -258,8 +280,8 @@ class Controller:
         print("管理员评论查询按钮被点击")
         # if self.admin_win:
         #    self.admin_win.withdraw()  # 确保admin_win被正确初始化后再调用withdraw
-        admin_search = Search(self.admin_win, self)  # 传入管理员窗口引用
-        admin_search.mainloop()
+        self.search_win = Search(self.admin_win, self)  # 传入管理员窗口引用
+        self.search_win.mainloop()
 
     def logout(self, event=None):
         # 关闭当前用户界面窗口
@@ -283,6 +305,20 @@ class Controller:
         event.widget.master.destroy()  # 关闭查询窗口
         if self.admin_win:
             self.admin_win.deiconify()  # 重新显示管理员窗口
+
+    def 执行查询(self, event):
+        if self.search_win:
+            year = self.search_win.get_选择年()
+            month = self.search_win.get_选择月()
+            day = self.search_win.get_选择日()
+            store = self.search_win.get_应用商店()
+            app_name = self.search_win.get_app_name()
+            rating = self.search_win.get_选择评分()
+            print(f"查询条件: 年={year}, 月={month}, 日={day}, 应用商店={store}, APP名={app_name}, 评分={rating}")
+            # 从数据库查询评论
+            comments = pin.ser_pin(year,month,day,store,app_name,rating)
+            # 更新UI中的评论列表框
+            self.search_win.update_comments_listbox(comments)
 
     # 管理员修改用户界面
     def 修改按钮(self, event):
@@ -509,6 +545,11 @@ class AdminApp(Toplevel):
     def get_app_name_input(self):
         return self.tk_input_app名.get().strip()
 
+    def update_user_listbox(self, users):
+        self.tk_list_box_用户账户.delete(0, END)  # 清空列表框
+        for user in users:
+            self.tk_list_box_用户账户.insert(END, user)  # 插入新用户
+
     def __tk_button_获取最新评论(self, parent):
         btn = Button(parent, text="获取最新评论", takefocus=False, )
         btn.place(x=240, y=100, width=90, height=30)
@@ -595,6 +636,34 @@ class Search(Toplevel):
         self.geometry(geometry)
         self.resizable(width=False, height=False)
 
+    def get_select_box_value(self, combobox):
+        return combobox.get()
+
+    def get_input_value(self, input_field):
+        return input_field.get().strip()
+
+    def get_选择年(self):
+        return self.get_select_box_value(self.tk_select_box_选择年)
+
+    def get_选择月(self):
+        return self.get_select_box_value(self.tk_select_box_选择月)
+
+    def get_选择日(self):
+        return self.get_select_box_value(self.tk_select_box_选择日)
+
+    def get_应用商店(self):
+        return self.get_select_box_value(self.tk_select_box_应用商店)
+
+    def get_app_name(self):
+        return self.get_input_value(self.tk_input_app名)
+
+    def get_选择评分(self):
+        return self.get_select_box_value(self.tk_select_box_评分)
+
+    def update_comments_listbox(self, comments):
+        self.tk_list_box_评论内容.delete(0, END)  # 清空列表框
+        for comment in comments:
+            self.tk_list_box_评论内容.insert(END, comment)  # 插入新评论
     def scrollbar_autohide(self, vbar, hbar, widget):
         def show():
             if vbar: vbar.lift(widget)
@@ -663,8 +732,7 @@ class Search(Toplevel):
         cb = Combobox(parent, state="readonly")
         cb['values'] = (
             "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
-            "20",
-            "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31")
+            "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31")
         cb.place(x=158, y=80, width=40, height=30)
         return cb
 
@@ -769,6 +837,7 @@ class Search(Toplevel):
         self.tk_button_增加分词.bind('<Button-1>', self.controller.增加分词)
         self.tk_button_删除分词.bind('<Button-1>', self.controller.删除分词)
         self.tk_button_退出查询.bind('<Button-1>', self.controller.退出查询)
+        self.tk_button_执行查询.bind('<Button-1>', self.controller.执行查询)
 
 
 class UserChange(Toplevel):

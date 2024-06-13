@@ -37,9 +37,9 @@ def scrape_app_comments(appname):
 
     driver.find_element(By.XPATH, '//*[@id="app"]/div/div[1]/div[3]/div[1]/input').send_keys(appname)
     driver.find_element(By.XPATH, '//*[@id="app"]/div/div[1]/div[3]/div[1]/input').send_keys(Keys.ENTER)
-    sleep(2)
+    sleep(3)
     driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/div[2]/div[1]/div[1]/div/div[1]').click()
-    sleep(2)
+    sleep(3)
     driver.find_element(By.XPATH, '//*[@id="app"]/div/div[2]/div/div[3]/div[4]/div/div[1]/div[2]/span').click()
 
     # 循环爬取评论的页数，每页25条评论
@@ -47,7 +47,7 @@ def scrape_app_comments(appname):
         # 执行JavaScript代码，将页面滚动到底部
         driver.execute_script('window.scrollTo(0,document.body.scrollHeight)')
         # 等待1秒
-        sleep(1)
+        sleep(2)
     # 获取页面的源代码
     html = driver.page_source
 

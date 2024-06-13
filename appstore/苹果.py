@@ -100,3 +100,4 @@ def fetch_comments(appname, stopwords_filepath='stop.txt'):
     print("Done!")
 
     return comment_data
+
